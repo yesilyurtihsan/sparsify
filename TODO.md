@@ -1,0 +1,2 @@
+- [ ] - Add gray_g function implementation which takes as input the g value and n value and returns the corresponding value in the gray_g table that is generated each time the function is called.
+- [ ] - Add a class to the ryser and gray_g implementations and store the Gray table in a private variable.
