@@ -4,8 +4,6 @@
 
 using namespace std;
 
-typedef int dtype;
-
 template<typename T>
 int numNonZeros(T ** A, int m, int n){
     int cnt = 0;
@@ -14,6 +12,140 @@ int numNonZeros(T ** A, int m, int n){
             if (A[i][j] != 0) cnt++;
     return cnt; 
 }
+
+
+template<typename T>
+class CRS {
+private:
+    T* val;
+    int* col_ind;
+    int* row_ptr;
+    int m;
+    int n;
+
+public:
+    CRS(T** A, int m, int n) {
+        int nnz = numNonZeros(A,m,n);
+        this->m = m;
+        this->n = n;
+        this->col_ind = new int[nnz];
+        this->val = new T[nnz];
+        int nnz_count = 0;
+        row_ptr = new int[m + 1];
+        row_ptr[0] = 0;
+
+        for (int i = 0; i < m; i++) {
+            bool row_started = false;
+            for (int j = 0; j < n; j++) {
+                if (A[i][j] != 0) {
+                    if (!row_started) {
+                        row_ptr[i] = nnz_count;
+                        row_started = true;
+                    }
+                    val[nnz_count] = A[i][j];
+                    col_ind[nnz_count] = j;
+                    nnz_count++;
+                }
+                if (!row_started)
+                    row_ptr[j + 1] = nnz_count;
+            }
+        }
+    }
+
+    ~CRS() {
+        delete[] val;
+        delete[] col_ind;
+        delete[] row_ptr;
+    }
+
+    T* getVal() {
+        return val;
+    }
+
+    int* getColInd() {
+        return col_ind;
+    }
+
+    int* getRowPtr() {
+        return row_ptr;
+    }
+
+    int getM() {
+        return m;
+    }
+
+    int getN() {
+        return n;
+    }
+
+};
+
+
+template<typename T>
+class CCS {
+private:
+    T* val;
+    int* row_ind;
+    int* col_ptr;
+    int m;
+    int n;
+
+public:
+    CCS(T** A, int m, int n) {
+       int nnz = numNonZeros(A,m,n);
+        this->m = m;
+        this->n = n;
+        this->row_ind = new int[nnz];
+        this->val = new T[nnz];
+        int nnz_count = 0;
+        col_ptr = new int[n + 1];
+        col_ptr[0] = 0;
+
+        for (int j = 0; j < n; j++) {
+            bool col_started = false;
+            for (int i = 0; i < m; i++) {
+                if (A[i][j] != 0) {
+                    if (!col_started) {
+                        col_ptr[j] = nnz_count;
+                        col_started = true;
+                    }
+                    val[nnz_count] = A[i][j];
+                    row_ind[nnz_count] = i;
+                    nnz_count++;
+                }
+            }
+            if (!col_started)
+                col_ptr[j + 1] = nnz_count;
+        }
+    }
+
+    ~CCS() {
+        delete[] val;
+        delete[] row_ind;
+        delete[] col_ptr;
+    }
+
+    T* getVal() {
+        return val;
+    }
+
+    int* getRowInd() {
+        return row_ind;
+    }
+
+    int* getColPtr() {
+        return col_ptr;
+    }
+
+    int getM() {
+        return m;
+    }
+
+    int getN() {
+        return n;
+    }
+};
+
 
 // Function to return the Compressed Row Storage (CRS) of matrix A
 void crs(int** A, int m, int n, int*& val, int*& col_ind, int*& row_ptr) {
