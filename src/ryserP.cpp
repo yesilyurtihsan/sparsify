@@ -55,35 +55,29 @@ long long perm3(const std::vector<std::vector<int>>& M) {
     // Calculate the initial product of row sums
     long long pm = s * std::accumulate(r.begin(), r.end(), 1LL, std::multiplies<long long>());
     
-    for (int j = 1; j < n; j++)
-        for (int i = (1 << j); i < (1 << j + 1); ++i) {
-            
-            auto gray_i = convertToGrayCode(i);
-            auto gray_prev = convertToGrayCode(i - 1);
-            
-            auto idx = std::log2(gray_i ^ gray_prev);
-            auto sign = (gray_i >> static_cast<int>(idx)) & 1 ? 1 : -1;
+    #pragma omp parallel for
+    for (int i = 2; i < (1 << n); i++)
+    {
+        auto gray_i = convertToGrayCode(i);
+        auto gray_prev = convertToGrayCode(i - 1);
+        
+        auto idx = std::log2(gray_i ^ gray_prev);
+        auto sign = (gray_i >> static_cast<int>(idx)) & 1 ? 1 : -1;
 
-            //    std::cout << "gray_i: " << std::bitset<8>(gray_i) << " gray_prev: " << std::bitset<8>(gray_prev) << " idx: " << idx << " sign: " << sign << std::endl;
+        // #pragma omp parallel for
+        for (int k = 0; k < nc; k++)
+            r[k] += M[idx][k] * sign;
 
-            // int n_threads = 2;
-            // int n_iter = nc / 2;
-            // Update row sums
-            // #pragma omp parallel num_threads(n_threads)     // 10X slower
-            // {
-            //     int tid = omp_get_thread_num();
-            //     for(int k=tid*n_iter; k<tid*n_iter+n_iter; k++)
-            //         r[k] += M[idx][k] * sign;
-            // }
+        // Update sign for the next iteration
+        // #pragma omp critical
+        // {
+        s *= -1;
+        // Add the product of updated row sums to the permanent
+        // #pragma omp critical
+        pm += s * std::accumulate(r.begin(), r.end(), 1LL, std::multiplies<long long>());
+        // }
 
-            for (int k = 0; k < nc; k++)
-                r[k] += M[idx][k] * sign;
-            // Update sign for the next iteration
-            s *= -1;
-            // Add the product of updated row sums to the permanent
-            // #pragma omp critical
-            pm += s * std::accumulate(r.begin(), r.end(), 1LL, std::multiplies<long long>());
-        }
+    }
 
     // Final adjustment of the sign based on the number of rows
     return pm * std::pow(-1, n);
