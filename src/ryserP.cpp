@@ -7,6 +7,7 @@
 #include <bitset>
 #include <chrono>
 #include <omp.h>
+#include <random>
 
 // long long perm1(const std::vector<std::vector<int>>& M) {
 //     int n = M.size(); // Number of rows in the matrix
@@ -38,9 +39,51 @@ auto convertToGrayCode(int n) {
     return n ^ (n >> 1);
 }
 
+class GrayCodeSign {
+private:
+    int n;
+    int* grayCodeValues;
+    int* signValues;
+
+public:
+    GrayCodeSign(int size) {
+        n = size;
+        grayCodeValues = new int[n];
+        signValues = new int[n];
+        grayCodeValues[0] = 0;
+        grayCodeValues[1] = 1;
+        signValues[0] = 0;
+        signValues[1] = 1;
+    }
+
+    void addValue(int idx, int grayCode, int sign) {
+        grayCodeValues[idx] = grayCode;
+        signValues[idx] = sign;
+    }
+
+    int getGrayCodeValue(int idx) {
+        return grayCodeValues[idx];
+    }
+
+    int getSignValue(int idx) {
+        return signValues[idx];
+    }
+
+    int size() {
+        return n;
+    }
+
+    ~GrayCodeSign() {
+        delete[] grayCodeValues;
+        delete[] signValues;
+    }
+};
+
+
+
 // Function to calculate the permanent of a square matrix using Ryser's formula.
 // This is an efficient algorithm for computing the permanent of a matrix, which is a concept similar to the determinant.
-long long perm3(const std::vector<std::vector<int>>& M) {
+long double perm3(const std::vector<std::vector<double>>& M) {
     int n = M.size(); // Number of rows in the matrix
     int nc = M[0].size(); // Number of columns in the matrix
     
@@ -50,14 +93,14 @@ long long perm3(const std::vector<std::vector<int>>& M) {
     }
     
     // Initialize row sum vector with the first row of the matrix
-    std::vector<int> r = M[0];
-    int s = -1; // Sign variable
+    std::vector<double> r = M[0];
+    double s = -1; // Sign variable
     // Calculate the initial product of row sums
-    long long pm = s * std::accumulate(r.begin(), r.end(), 1LL, std::multiplies<long long>());
+
+    auto pm = s * std::accumulate(r.begin(), r.end(), 1.0L, std::multiplies<long double>());
     
-    #pragma omp parallel for
-    for (int i = 2; i < (1 << n); i++)
-    {
+    #pragma omp parallel for //reduction(+: pm)
+    for (int i = 2; i < (1 << n); i++){
         auto gray_i = convertToGrayCode(i);
         auto gray_prev = convertToGrayCode(i - 1);
         
@@ -68,44 +111,57 @@ long long perm3(const std::vector<std::vector<int>>& M) {
         for (int k = 0; k < nc; k++)
             r[k] += M[idx][k] * sign;
 
-        // Update sign for the next iteration
-        // #pragma omp critical
-        // {
         s *= -1;
         // Add the product of updated row sums to the permanent
         // #pragma omp critical
-        pm += s * std::accumulate(r.begin(), r.end(), 1LL, std::multiplies<long long>());
-        // }
-
+        pm += s * std::accumulate(r.begin(), r.end(), 1.0L, std::multiplies<long double>());
     }
 
     // Final adjustment of the sign based on the number of rows
     return pm * std::pow(-1, n);
 }
 
-std::vector<std::vector<int>> getMatrix(int n){
-    std::vector<std::vector<int>> matrix(n, std::vector<int>(n, 0));
+
+template<typename T>
+std::vector<std::vector<T>> getMatrix(int n){
+    std::vector<std::vector<T>> matrix(n, std::vector<T>(n, 0));
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<T> dist(0.0, 1.0);
     for(int i=0; i<n; i++)
-        for(int j=0; j<n; j++)
-            matrix[i][j] = j+1;
+        for(int j=0; j<n; j++){
+            double num = dist(gen);
+            if (num < 0.6)
+                matrix[i][j] = num;
+            else
+                matrix[i][j] = 0;
+        }
     return matrix;
 }
 
 
 int main(int argc, char ** argv) {
-    // std::vector<std::vector<int>> matrix = {
+    // std::vector<std::vector<double>> matrix = {
     //     {1, 2, 3},
     //     {4, 5, 6},
     //     {7, 8, 9}
     // };
     int size = atoi(argv[1]);
-    std::vector<std::vector<int>> matrix = getMatrix(size);
+    std::vector<std::vector<double>> matrix = getMatrix<double>(size);
    
+    // for (int i=0; i<size; i++){
+    //     for(int j=0; j<size; j++)
+    //         std::cout << matrix[i][j] << " ";
+    //     std::cout << std::endl;
+    // }
+
+    std::cout << std::endl;
+  
 
     try {
         // Calculate and display the permanent of the matrix
         auto start = std::chrono::high_resolution_clock::now();
-        long long result = perm3(matrix);
+        auto result = perm3(matrix);
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed_time = end - start;
         std::cout << "Elapsed time: " << elapsed_time.count() << " seconds" << std::endl;

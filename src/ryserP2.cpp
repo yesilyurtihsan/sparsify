@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <bitset>
 #include <chrono>
+#include <omp.h>
 #include <random>
 
 // long long perm1(const std::vector<std::vector<int>>& M) {
@@ -38,7 +39,10 @@ auto convertToGrayCode(int n) {
     return n ^ (n >> 1);
 }
 
-long double perm3(const std::vector<std::vector<double>>& M) {
+
+// Function to calculate the permanent of a square matrix using Ryser's formula.
+// This is an efficient algorithm for computing the permanent of a matrix, which is a concept similar to the determinant.
+long double perm3(const std::vector<std::vector<double>>& M, int num_threads) {
     int n = M.size(); // Number of rows in the matrix
     int nc = M[0].size(); // Number of columns in the matrix
     
@@ -51,10 +55,17 @@ long double perm3(const std::vector<std::vector<double>>& M) {
     std::vector<double> r = M[0];
     double s = -1; // Sign variable
     // Calculate the initial product of row sums
-    long double pm = s * std::accumulate(r.begin(), r.end(), 1.0L, std::multiplies<long double>());
+
+    auto pm = s * std::accumulate(r.begin(), r.end(), 1.0L, std::multiplies<long double>());
     
-    for (int i = 2; i < (1 << n); i++)
+    int n_threads = num_threads;
+    int n_iter = pow(2,n) / n_threads;
+
+    #pragma omp parallel num_threads(n_threads)
     {
+        int tid = omp_get_thread_num();
+        for (int i = tid*n_iter; i < tid*n_iter + n_iter; i++){
+        
         auto gray_i = convertToGrayCode(i);
         auto gray_prev = convertToGrayCode(i - 1);
         
@@ -69,8 +80,7 @@ long double perm3(const std::vector<std::vector<double>>& M) {
         // Add the product of updated row sums to the permanent
         // #pragma omp critical
         pm += s * std::accumulate(r.begin(), r.end(), 1.0L, std::multiplies<long double>());
-        // }
-
+    }
     }
 
     // Final adjustment of the sign based on the number of rows
@@ -103,6 +113,7 @@ int main(int argc, char ** argv) {
     //     {7, 8, 9}
     // };
     int size = atoi(argv[1]);
+    int n_threads = atoi(argv[2]);
     std::vector<std::vector<double>> matrix = getMatrix<double>(size);
    
     // for (int i=0; i<size; i++){
@@ -112,16 +123,19 @@ int main(int argc, char ** argv) {
     // }
 
     std::cout << std::endl;
+  
 
     try {
         // Calculate and display the permanent of the matrix
         auto start = std::chrono::high_resolution_clock::now();
-        auto result = perm3(matrix);
+        auto result = perm3(matrix, n_threads);
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed_time = end - start;
         std::cout << "Elapsed time: " << elapsed_time.count() << " seconds" << std::endl;
 
-        std::cout << "Result for Perm3: " << result << std::endl;
+        // std::cout << "Result for Perm3: " << result << std::endl;
+        g++ ryserP2.cpp -O3 -o rp2 -fopenmp
+
         // result = perm1(matrix);
         // std::cout << "Result1: " << result << std::endl;
     } catch (const std::exception& e) {
