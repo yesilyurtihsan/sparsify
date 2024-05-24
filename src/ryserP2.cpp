@@ -134,7 +134,6 @@ int main(int argc, char ** argv) {
         std::cout << "Elapsed time: " << elapsed_time.count() << " seconds" << std::endl;
 
         // std::cout << "Result for Perm3: " << result << std::endl;
-        g++ ryserP2.cpp -O3 -o rp2 -fopenmp
 
         // result = perm1(matrix);
         // std::cout << "Result1: " << result << std::endl;
