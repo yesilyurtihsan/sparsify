@@ -3,7 +3,7 @@
 #include <iostream>
 #include <omp.h>
 #include <chrono>
-#include "crcs.cpp"
+#include "../crcs.cpp"
 
 auto convertToGrayCode(int n) {
     return n ^ (n >> 1);
@@ -37,8 +37,6 @@ double SpaRyser(const CRS& crs, const CCS& ccs) {
     }
 
     // Main loop
-
-    #pragma omp parallel for num_threads(16) schedule(dynamic, 512) reduction(+:p)
     for (int g = 0; g < (1 << (n - 1)); ++g) {
         auto gray_i = convertToGrayCode(g);
         auto gray_prev = convertToGrayCode(g - 1);
@@ -46,6 +44,7 @@ double SpaRyser(const CRS& crs, const CCS& ccs) {
         auto j = std::log2(gray_i ^ gray_prev);
         auto s = (gray_i >> static_cast<int>(j)) & 1 ? 1 : -1;
 
+        // #pragma omp parallel for num_threads(16)
         for (int ptr = ccs.cptrs[j]; ptr < ccs.cptrs[j + 1]; ++ptr) {
             int row = ccs.rows[ptr];
             double val = ccs.cvals[ptr];
