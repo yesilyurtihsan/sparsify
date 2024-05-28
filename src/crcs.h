@@ -7,12 +7,12 @@ class M3 {
     public:
     int x;
     int y;
-    int v;
+    double v;
 
-    M3(int x, int y, int v): x(x), y(y), v(v) {}
+    M3(int x, int y, double v): x(x), y(y), v(v) {}
     int getX() const { return x; }
     int getY() const { return y; }
-    int getV() const { return v; }
+    double getV() const { return v; }
 };
 
 class CRS {
