@@ -3,6 +3,7 @@
 #include <iostream>
 #include <chrono>
 #include <cuda_runtime.h>
+#include "crcs.h"
 
 __device__ double atomicAddExp(double* address, double val)
 {
@@ -17,50 +18,6 @@ old = atomicCAS(address_as_ull, assumed,
     } while (assumed != old);
     return __longlong_as_double(old);
 }
-
-class CRS {
-public:
-    std::vector<int> rptrs;
-    std::vector<int> columns;
-    std::vector<double> rvals;
-
-    CRS(const std::vector<std::vector<double>>& matrix) {
-        int row_index = 0;
-        for (const auto& row : matrix) {
-            rptrs.push_back(rvals.size());
-            for (int col_index = 0; col_index < row.size(); ++col_index) {
-                if (row[col_index] != 0) {
-                    columns.push_back(col_index);
-                    rvals.push_back(row[col_index]);
-                }
-            }
-            ++row_index;
-        }
-        rptrs.push_back(rvals.size());
-    }
-};
-
-class CCS {
-public:
-    std::vector<int> cptrs;
-    std::vector<int> rows;
-    std::vector<double> cvals;
-
-    CCS(const std::vector<std::vector<double>>& matrix) {
-        int num_cols = matrix[0].size();
-        cptrs.resize(num_cols + 1, 0);
-
-        for (int col_index = 0; col_index < num_cols; ++col_index) {
-            for (int row_index = 0; row_index < matrix.size(); ++row_index) {
-                if (matrix[row_index][col_index] != 0) {
-                    rows.push_back(row_index);
-                    cvals.push_back(matrix[row_index][col_index]);
-                }
-            }
-            cptrs[col_index + 1] = cvals.size();
-        }
-    }
-};
 
 __device__ int convertToGrayCode(int n) {
     return n ^ (n >> 1);
@@ -177,41 +134,4 @@ double SpaRyser(const CRS& crs, const CCS& ccs) {
     cudaFree(d_nzeros);
 
     return p * ((4 * (n % 2)) - 2);
-}
-
-int main() {
-    std::vector<std::vector<double>> matrix = {
-        {7, 9, 18},
-        {41, 53, 16},
-        {76, 82, 9}
-    };
-
-    CRS crs(matrix);
-    CCS ccs(matrix);
-
-    std::cout << "CRS Representation:" << std::endl;
-    std::cout << "rptrs: ";
-    for (auto val : crs.rptrs) std::cout << val << " ";
-    std::cout << std::endl << "columns: ";
-    for (auto val : crs.columns) std::cout << val << " ";
-    std::cout << std::endl << "rvals: ";
-    for (auto val : crs.rvals) std::cout << val << " ";
-    std::cout << std::endl;
-
-    std::cout << "CCS Representation:" << std::endl;
-    std::cout << "cptrs: ";
-    for (auto val : ccs.cptrs) std::cout << val << " ";
-    std::cout << std::endl << "rows: ";
-    for (auto val : ccs.rows) std::cout << val << " ";
-    std::cout << std::endl << "cvals: ";
-    for (auto val : ccs.cvals) std::cout << val << " ";
-    std::cout << std::endl;
-
-    auto start = std::chrono::high_resolution_clock::now();
-    double permanent = SpaRyser(crs, ccs);
-    auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "Permanent of the matrix is: " << permanent << std::endl;
-    std::cout << "Time taken: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << "ns" << std::endl;
-
-    return 0;
 }

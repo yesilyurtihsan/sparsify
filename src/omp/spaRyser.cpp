@@ -3,7 +3,7 @@
 #include <iostream>
 #include <omp.h>
 #include <chrono>
-#include "../crcs.cpp"
+#include "../crcs.h"
 
 auto convertToGrayCode(int n) {
     return n ^ (n >> 1);
@@ -67,53 +67,4 @@ double SpaRyser(const CRS& crs, const CCS& ccs) {
     }
 
     return p * ((4 * (n % 2)) - 2);
-}
-
-// Main function or other appropriate place in your code
-int main() {
-    // Define a matrix
-    // std::vector<std::vector<double>> matrix = {
-    //     {1, 2, 3},
-    //     {4, 5, 6},
-    //     {7, 8, 9}
-    // };
-
-    std::vector<std::vector<double>> matrix = {
-        {7, 9, 18},
-        {41, 53, 16},
-        {76, 82, 9}
-    };
-
-    // Create CRS and CCS objects
-    CRS crs(matrix);
-    CCS ccs(matrix);
-
-    // Output CRS representation
-    std::cout << "CRS Representation:" << std::endl;
-    std::cout << "rptrs: ";
-    for (auto val : crs.rptrs) std::cout << val << " ";
-    std::cout << std::endl << "columns: ";
-    for (auto val : crs.columns) std::cout << val << " ";
-    std::cout << std::endl << "rvals: ";
-    for (auto val : crs.rvals) std::cout << val << " ";
-    std::cout << std::endl;
-
-    // Output CCS representation
-    std::cout << "CCS Representation:" << std::endl;
-    std::cout << "cptrs: ";
-    for (auto val : ccs.cptrs) std::cout << val << " ";
-    std::cout << std::endl << "rows: ";
-    for (auto val : ccs.rows) std::cout << val << " ";
-    std::cout << std::endl << "cvals: ";
-    for (auto val : ccs.cvals) std::cout << val << " ";
-    std::cout << std::endl;
-
-    // Compute the permanent using the SpaRyser algorithm
-    auto start = std::chrono::high_resolution_clock::now();
-    double permanent = SpaRyser(crs, ccs);
-    auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "Permanent of the matrix is: " << permanent << std::endl;
-    std::cout << "Time taken: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << "ns" << std::endl;
-
-    return 0;
 }
