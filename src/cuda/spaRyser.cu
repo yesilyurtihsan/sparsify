@@ -3,7 +3,7 @@
 #include <iostream>
 #include <chrono>
 #include <cuda_runtime.h>
-#include "crcs.h"
+#include "../crcs.h"
 
 __device__ double atomicAddExp(double* address, double val)
 {

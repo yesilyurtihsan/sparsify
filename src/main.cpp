@@ -3,7 +3,7 @@
 #include <vector>
 #include "crcs.h"
 #include <chrono>
-#include "spa_ryser.cpp"
+#include "omp/spaRyser.cpp"
 
 using namespace std;
 
