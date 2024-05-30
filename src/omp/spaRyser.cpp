@@ -5,7 +5,7 @@
 #include <chrono>
 #include "../crcs.h"
 
-auto convertToGrayCode(int n) {
+long int convertToGrayCode(unsigned long int n) {
     return n ^ (n >> 1);
 }
 // Function to compute the permanent using the SpaRyser algorithm
@@ -37,12 +37,14 @@ double SpaRyser(const CRS& crs, const CCS& ccs) {
     }
 
     // Main loop
-    for (int g = 0; g < (1 << (n - 1)); ++g) {
-        auto gray_i = convertToGrayCode(g);
-        auto gray_prev = convertToGrayCode(g - 1);
+    #pragma omp parallel for num_threads(16)
+    for (long int g = 0; g < pow(2, n - 1); ++g) {
+        if (g % 10000000 == 0) std::cout << g << std::endl;
+        long int gray_i = convertToGrayCode(g);
+        long int gray_prev = convertToGrayCode(g - 1);
 
         auto j = std::log2(gray_i ^ gray_prev);
-        auto s = (gray_i >> static_cast<int>(j)) & 1 ? 1 : -1;
+        auto s = (gray_i >> static_cast<unsigned long int>(j)) & 1 ? 1 : -1;
 
         // #pragma omp parallel for num_threads(16)
         for (int ptr = ccs.cptrs[j]; ptr < ccs.cptrs[j + 1]; ++ptr) {
