@@ -43,7 +43,7 @@ int main(int argc, char ** argv) {
     std::cout << std::endl;
 
     auto start = std::chrono::high_resolution_clock::now();
-    double permanent = SpaRyser(crs, ccs);
+    auto permanent = SpaRyser<float>(crs, ccs);
     auto end = std::chrono::high_resolution_clock::now();
     std::cout << "Permanent of the matrix is: " << permanent << std::endl;
     std::cout << "Time taken: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << "ns" << std::endl;
