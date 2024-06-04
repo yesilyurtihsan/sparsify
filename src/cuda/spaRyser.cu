@@ -5,6 +5,10 @@
 #include <cuda_runtime.h>
 #include "../crcs.h"
 
+#define NUM_BLOCKS 32
+#define NUM_THREADS 1024
+#define SUB 15
+
 __device__ double atomicAddExp(double* address, double val)
 {
     unsigned long long int* address_as_ull =
@@ -19,7 +23,7 @@ old = atomicCAS(address_as_ull, assumed,
     return __longlong_as_double(old);
 }
 
-__device__ int convertToGrayCode(int n) {
+__device__ long int convertToGrayCode(long int n) {
     return n ^ (n >> 1);
 }
 
@@ -35,6 +39,7 @@ __global__ void initialPopulation(const int* d_rptrs, const double* d_rvals, dou
 }
 
 __global__ void mainLoop(const int* d_cptrs, const int* d_rows, const double* d_cvals, double* d_x, int n, double* p, long int g, int* d_nzeros) {
+    g = g + blockDim.x * blockIdx.x + threadIdx.x;
     long int gray_i = convertToGrayCode(g);
     long int gray_prev = convertToGrayCode(g - 1);
     long int j = __ffs(gray_i ^ gray_prev) - 1;
@@ -62,6 +67,7 @@ __global__ void mainLoop(const int* d_cptrs, const int* d_rows, const double* d_
 }
 
 __global__ void mainLoop(const int* d_cptrs, const int* d_rows, const double* d_cvals, float* d_x, int n, float* p, long int g, int* d_nzeros) {
+    g = g + blockDim.x * blockIdx.x + threadIdx.x;
     long int gray_i = convertToGrayCode(g);
     long int gray_prev = convertToGrayCode(g - 1);
     int j = __ffs(gray_i ^ gray_prev) - 1;
@@ -142,16 +148,16 @@ T SpaRyser(const CRS& crs, const CCS& ccs) {
     cudaMemcpy(d_p, &p, sizeof(T), cudaMemcpyHostToDevice);
     cudaMemcpy(d_nzeros, &nzeros, sizeof(int), cudaMemcpyHostToDevice);
 
-    // Main loop
-    blocksPerGrid = 32;
-    threadsPerBlock = 2048;
-    for (long int g = 0; g < pow(2, n-1) / (blocksPerGrid * threadsPerBlock); ++g) {                        // HANDLE THE FOR LOOP AND THREAD INDEXING
-        if (g % 1000000 == 0) std::cout << g << std::endl;
-        mainLoop<<<blocksPerGrid, threadsPerBlock>>>(d_cptrs, d_rows, d_cvals, d_x, n, d_p, g, d_nzeros);
-    }
+    long int total_iterations = 1L << (n - 1);
+    threadsPerBlock = NUM_THREADS;
+    blocksPerGrid = (total_iterations + threadsPerBlock - 1) / threadsPerBlock;
 
-    // Copy result back to host
-    cudaMemcpy(&p, d_p, sizeof(T), cudaMemcpyDeviceToHost);
+    // Main loop
+    for (long int g = 0; g < total_iterations; g+=blocksPerGrid*threadsPerBlock) {
+        if (g % 8192 == 0) std::cout << g << std::endl;
+        mainLoop<<<blocksPerGrid, threadsPerBlock>>>(d_cptrs, d_rows, d_cvals, d_x, n, d_p, g, d_nzeros);
+        cudaDeviceSynchronize();  // Ensure kernel has completed    
+    }
 
     // Free device memory
     cudaFree(d_rptrs);
