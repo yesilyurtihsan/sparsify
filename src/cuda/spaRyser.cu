@@ -5,9 +5,9 @@
 #include <cuda_runtime.h>
 #include "../crcs.h"
 
-#define NUM_BLOCKS 32
+#define NUM_BLOCKS 256
 #define NUM_THREADS 1024
-#define SUB 15
+// #define SUB 15
 
 __device__ double atomicAddExp(double* address, double val)
 {
@@ -148,16 +148,17 @@ T SpaRyser(const CRS& crs, const CCS& ccs) {
     cudaMemcpy(d_p, &p, sizeof(T), cudaMemcpyHostToDevice);
     cudaMemcpy(d_nzeros, &nzeros, sizeof(int), cudaMemcpyHostToDevice);
 
-    long int total_iterations = 1L << (n - 1);
+    long int total_iterations = 1ULL << (n - 1);
     threadsPerBlock = NUM_THREADS;
-    blocksPerGrid = (total_iterations + threadsPerBlock - 1) / threadsPerBlock;
-
+    // blocksPerGrid = (total_iterations + threadsPerBlock - 1) / threadsPerBlock;
+    blocksPerGrid  = NUM_BLOCKS;
     // Main loop
     for (long int g = 0; g < total_iterations; g+=blocksPerGrid*threadsPerBlock) {
         if (g % 8192 == 0) std::cout << g << std::endl;
         mainLoop<<<blocksPerGrid, threadsPerBlock>>>(d_cptrs, d_rows, d_cvals, d_x, n, d_p, g, d_nzeros);
-        cudaDeviceSynchronize();  // Ensure kernel has completed    
     }
+    // cudaDeviceSynchronize();  // Ensure kernel has completed    
+
 
     // Free device memory
     cudaFree(d_rptrs);
